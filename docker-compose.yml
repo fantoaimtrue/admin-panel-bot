@@ -1,0 +1,50 @@
+version: '3.7'
+
+services:
+  django_gunicorn:
+    volumes:
+      - static:/static
+    env_file:
+      - .env
+    build:
+      context: .
+      dockerfile: Dockerfile.django
+    ports:
+      - "8000:8000"
+  nginx:
+    build: ./nginx
+    volumes:
+      - static:/static
+    ports:
+      - "80:80"
+    depends_on:
+      - django_gunicorn
+
+
+  db:
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+      POSTGRES_DB: ${DATABASE}
+      POSTGRES_USER: ${PGUSER}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: on-failure
+    ports:
+      - ${POSTGRES_PORT:-5431}:5434
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    command: sh -c "python app.py"
+    env_file:
+      - .env
+    depends_on:
+      - db
+    restart: always
+
+volumes:
+  static:
+  pgdata:
+
